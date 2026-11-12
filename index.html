@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- The page may only talk to Anthropic. Nothing else can be loaded or contacted. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://api.anthropic.com; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#ECEFF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E141B" media="(prefers-color-scheme: dark)">
+<title>Meeting Brain</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Meeting Brain</h1>
+      <p>Listens to your customer in silence. Speaks only to you.</p>
+    </div>
+    <div class="status" id="status" data-state="idle">
+      <span class="lamp" aria-hidden="true"></span>
+      <span id="statusText">Standing by</span>
+      <span class="clock" id="clock" title="Time listened">00:00</span>
+    </div>
+  </header>
+
+  <section class="checks" aria-label="Ready check">
+    <ul class="chips">
+      <li class="chip" id="chipEars" data-s="wait"><span class="chip-k">Ears <small>microphone</small></span><span class="chip-v">Checking…</span></li>
+      <li class="chip" id="chipBrain" data-s="wait"><span class="chip-k">Brain <small>Claude</small></span><span class="chip-v">Checking…</span></li>
+      <li class="chip" id="chipVoice" data-s="wait"><span class="chip-k">Voice <small>headphones</small></span><span class="chip-v">Checking…</span></li>
+    </ul>
+    <button type="button" class="btn ghost" id="testBtn">Test headphones</button>
+    <p class="note" id="availNote" hidden></p>
+  </section>
+
+  <details class="setup" id="setup">
+    <summary>Setup <span>key, language, voice, what you sell</span></summary>
+    <div class="setup-grid">
+      <div class="field wide">
+        <label for="keyInput">Claude API key</label>
+        <div class="keyrow">
+          <input type="text" class="secret" id="keyInput" placeholder="sk-ant-…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text">
+          <button type="button" class="btn ghost" id="keySave">Save</button>
+        </div>
+        <p class="fine" id="keyState">No key saved yet.</p>
+        <p class="fine">The key stays in this phone's browser and is sent only to Anthropic. Create one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> and set a monthly spend limit there.</p>
+        <button type="button" class="btn link danger" id="keyRemove" hidden>Remove the key from this phone</button>
+      </div>
+      <div class="field">
+        <label for="meetingLang">The customer speaks</label>
+        <select id="meetingLang"></select>
+      </div>
+      <div class="field">
+        <label for="answerLang">Answer me in</label>
+        <select id="answerLang"></select>
+      </div>
+      <div class="field">
+        <label for="speed">Thinking</label>
+        <select id="speed">
+          <option value="fast">Fast answer</option>
+          <option value="deep">Deeper, takes longer</option>
+        </select>
+      </div>
+      <label class="check" for="speakOn">
+        <input type="checkbox" id="speakOn" checked>
+        <span>Speak the answer aloud. Connect your headphones first, or the customer hears it too.</span>
+      </label>
+      <div class="field wide">
+        <label for="about">What you sell (optional). The solution will be built from what you can really offer.</label>
+        <textarea id="about" rows="3" placeholder="Example: We build online stores and booking systems for small shops. A typical project takes 4 to 6 weeks."></textarea>
+      </div>
+    </div>
+  </details>
+
+  <main class="panes">
+    <section class="pane" aria-labelledby="heardH">
+      <div class="pane-head">
+        <h2 id="heardH">What the customer said</h2>
+        <span class="meta" id="wordCount">0 words</span>
+      </div>
+      <textarea id="heard" spellcheck="false" aria-labelledby="heardH" placeholder="Example: &quot;We have three bakeries and still take phone orders on paper. On Saturdays we lose orders, and I never know what stock the other shops have. I need something simple before December. My staff are not good with computers.&quot;"></textarea>
+      <p class="partial" id="partial" aria-hidden="true"></p>
+      <div class="pane-foot">
+        <span>If listening misses words, tap the box and use the microphone key on the keyboard.</span>
+        <span>
+          <button type="button" class="btn link" id="clearBtn">New meeting</button>
+          <span id="clearConfirm" hidden>Clear everything?
+            <button type="button" class="btn link danger" id="clearYes">Yes, clear</button>
+            <button type="button" class="btn link" id="clearNo">Keep</button>
+          </span>
+        </span>
+      </div>
+    </section>
+
+    <section class="pane" id="advicePane" aria-labelledby="adviceH">
+      <div class="pane-head">
+        <h2 id="adviceH">What to do next</h2>
+        <span class="tag" id="exampleTag">Example</span>
+        <button type="button" class="btn link" id="shareBtn" hidden>Share notes</button>
+      </div>
+      <div class="say">
+        <div class="say-head">
+          <span class="label">In your ear</span>
+          <span class="say-actions">
+            <button type="button" class="btn link" id="repeatBtn" hidden>Repeat</button>
+            <button type="button" class="btn link" id="stopVoiceBtn" hidden>Stop voice</button>
+          </span>
+        </div>
+        <p id="sayText">They lose Saturday orders because everything is on paper, and they cannot see stock across three shops. Propose one shared order tablet per shop with a live stock view, running before December. Ask how many orders they take on a busy Saturday.</p>
+      </div>
+      <div class="sec" id="secNeeds">
+        <h3>What they need</h3>
+        <ul id="needsList">
+          <li>Stop losing phone orders on busy Saturdays</li>
+          <li>See stock across all three bakeries</li>
+          <li>Simple enough for staff who avoid computers</li>
+          <li>Running before December</li>
+        </ul>
+      </div>
+      <div class="sec" id="secSolution">
+        <h3>Solution to propose</h3>
+        <p id="solutionText">A shared order app on one tablet per shop, with large buttons and a live stock count every shop can see. Start with orders only and add stock in week two, so staff learn one thing at a time.</p>
+      </div>
+      <div class="sec" id="secSuggest">
+        <h3>Suggestions</h3>
+        <ul id="suggestList">
+          <li>Offer a two-week pilot in the busiest shop first</li>
+          <li>Include 30 minutes of staff training per shop in the price</li>
+          <li>Point out that a December start means deciding this month</li>
+        </ul>
+      </div>
+      <div class="sec" id="secAsk">
+        <h3>Ask them next</h3>
+        <ul id="askList">
+          <li>How many orders do you take on a busy Saturday?</li>
+          <li>Who would look after it in each shop?</li>
+          <li>Do you have a budget in mind?</li>
+        </ul>
+      </div>
+      <p class="note" id="adviceNote" hidden></p>
+    </section>
+  </main>
+
+  <details class="setup tips">
+    <summary>Tips for iPhone</summary>
+    <ul>
+      <li>Open this page in Safari, and keep it open with the screen on. Listening stops when the phone locks.</li>
+      <li>If the iPhone asks for the microphone again and again: tap the page menu in the address bar, then Website Settings, then set Microphone to Allow.</li>
+      <li>Dictation must be on: Settings, General, Keyboard, Enable Dictation.</li>
+      <li>With wireless earphones the iPhone listens through their microphone. Try it once before a real meeting.</li>
+      <li>For a Home Screen icon: tap Share, then Add to Home Screen.</li>
+    </ul>
+  </details>
+
+  <div class="dock">
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    <div class="dock-row">
+      <button type="button" class="btn main" id="mainBtn" disabled>Getting ready…</button>
+      <button type="button" class="btn alt" id="altBtn" hidden>Pause</button>
+    </div>
+  </div>
+</div>
+
+<script src="anthropic-sdk.js"></script>
+<script src="parse.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
